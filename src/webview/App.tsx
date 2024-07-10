@@ -1,5 +1,6 @@
 import React, { ChangeEvent, FormEventHandler } from 'react';
 import { VSCodeButton, VSCodeTextField } from '@vscode/webview-ui-toolkit/react';
+import './App.css';
 
 const vscode = acquireVsCodeApi();
 
@@ -15,9 +16,9 @@ export function App() {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <VSCodeTextField type="text" placeholder="Enter filter command" value={command} onInput={handleCommandChange} />
-      <VSCodeButton type="submit">Execute</VSCodeButton>
+    <form onSubmit={handleSubmit} className="w-full">
+      <VSCodeTextField type="text" placeholder="Enter filter command" value={command} onInput={handleCommandChange} className="w-full"/>
+      <VSCodeButton type="submit" className="w-full">Execute</VSCodeButton>
     </form>
   );
 }
