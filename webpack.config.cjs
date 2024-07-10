@@ -39,6 +39,15 @@ const extensionConfig = (env, argv) => ({
           }
         ]
       },
+      {
+        test: /\.css$/,
+        exclude: /node_modules/,
+        use: [
+          'style-loader',
+          'css-loader',
+          'postcss-loader',
+        ]
+      }
     ]
   },
   devtool: 'nosources-source-map',
