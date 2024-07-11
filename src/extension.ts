@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { setAllContent } from './utils/edit';
+import { execSync } from 'child_process';
 
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
@@ -72,7 +73,7 @@ class FilterFlickSidebarProvider implements vscode.WebviewViewProvider {
     const document = editor.document;
     const text = document.getText();
 
-    const filteredText = text.split('\n').filter(line => line.includes(command)).join('\n');
+    const filteredText = this.filterWithShellCommand(command, text);
 
     let outputDocument = this.getExistingOutputDocument(document);
 
@@ -96,6 +97,10 @@ class FilterFlickSidebarProvider implements vscode.WebviewViewProvider {
 
   private updateOutputDocumentMapping(document: vscode.TextDocument, filterOutputDocument: vscode.TextDocument) {
     this.outputDocumentUris.set(document.uri.toString(), filterOutputDocument.uri.toString());
+  }
+
+  private filterWithShellCommand(command: string, content: string) {
+    return execSync(command, { input: content }).toString();
   }
 }
 
