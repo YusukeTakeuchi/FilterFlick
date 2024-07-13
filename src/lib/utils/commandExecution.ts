@@ -21,10 +21,11 @@ type ProgressResult<T> = {
   * If the user cancels the operation, the promise resolves with 'cancel'.
   */
 export async function filterWithShellCommand(command: string, content: string): Promise<ProgressResult<FilterResultValue>> {
+  let child: child_process.ChildProcessWithoutNullStreams | undefined;
   const commandPromise = new Promise<FilterResultValue>((resolve) => {
     let stdoutResult = '';
     let stderrResult = '';
-    const child = child_process.spawn(command, { shell: true });
+    child = child_process.spawn(command, { shell: true });
     child.stdout.on('data', (data) => {
       stdoutResult += data;
     });
@@ -43,7 +44,11 @@ export async function filterWithShellCommand(command: string, content: string): 
   });
 
   const title = `Executing the filter command: ${command}`;
-  return await showVscodeProgressWithDelay(commandPromise, title, 500);
+  const result = await showVscodeProgressWithDelay(commandPromise, title, 500);
+  if (result.result === 'cancel') {
+    child?.kill();
+  }
+  return result;
 }
 
 function showVscodeProgressWithDelay<T>(promise: Thenable<T>, title: string, delayMs: number): Promise<ProgressResult<T>> {
