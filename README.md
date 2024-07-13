@@ -16,3 +16,9 @@ FilterFlick is a powerful tool for filtering text within the VS Code editor and 
 ### 0.0.1
 
 Initial release
+
+### 0.0.2
+
+- Commands now display progress and can be cancelled mid-execution.
+- Commands can be executed from the Command Palette.
+- Standard error output is displayed after command execution.

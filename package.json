@@ -2,10 +2,11 @@
   "name": "filterflick",
   "displayName": "FilterFlick",
   "description": "Instantly filter and view your text in a split editor layout.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "license": "MIT",
   "publisher": "YusukeTakeuchi",
   "repository": "https://github.com/YusukeTakeuchi/FilterFlick",
+  "icon": "resources/FilterFlick.png",
   "engines": {
     "vscode": "^1.87.0"
   },
