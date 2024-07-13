@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { setAllContent } from './utils/edit';
-import { filterWithShellCommand } from './utils/commandExecution';
+import { setAllContent } from './lib/utils/edit';
+import { filterWithShellCommand } from './lib/utils/commandExecution';
+import { setupWebview } from './lib/setupWebview';
 
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
@@ -19,49 +20,10 @@ class FilterFlickSidebarProvider implements vscode.WebviewViewProvider {
   }
 
   resolveWebviewView(webviewView: vscode.WebviewView): void | Thenable<void> {
-    webviewView.webview.options = {
-      enableScripts: true,
-      localResourceRoots: [vscode.Uri.file(path.join(this.extensionPath, 'dist'))]
-    };
-
-    webviewView.webview.html = this.getWebviewContent(webviewView.webview);
-
-    webviewView.webview.onDidReceiveMessage(
-      message => {
-        switch (message.command) {
-          case 'filter':
-            this.applyFilter(message.text);
-            return;
-        }
-      }
-    );
-  }
-
-  private getWebviewScriptUri(webview: vscode.Webview): vscode.Uri {
-    return webview.asWebviewUri(
-      vscode.Uri.file(path.join(this.extensionPath, 'dist', 'webview.js'))
-    );
-  }
-
-  private getWebviewContent(webview: vscode.Webview): string {
-    const scriptUri = this.getWebviewScriptUri(webview);
-    console.log(scriptUri);
-    const content = `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Command Input</title>
-        <script src="${scriptUri.toString()}"></script>
-      </head>
-      <body>
-        <div id="root"></div>
-      </body>
-      </html>
-    `;
-
-    return content;
+    setupWebview(webviewView.webview, {
+      extensionPath: this.extensionPath,
+      applyFilter: this.applyFilter.bind(this),
+    });
   }
 
   private async applyFilter(command: string) {
