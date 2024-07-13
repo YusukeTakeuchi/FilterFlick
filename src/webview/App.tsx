@@ -14,6 +14,8 @@ type Command = {
 };
 
 export function App() {
+  const [initialized, setInitialized] = React.useState(false);
+
   const [command, setCommand] = React.useState('');
 
   const [stderr, setStderr] = React.useState('');
@@ -41,6 +43,10 @@ export function App() {
       }
     };
     addEventListener('message', listener);
+    if (!initialized) {
+      vscode.postMessage({ command: 'ready' });
+      setInitialized(true);
+    }
     return () => removeEventListener('message', listener);
   }, []);
 

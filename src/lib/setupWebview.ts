@@ -4,9 +4,10 @@ import * as path from 'path';
 type SetupWebviewOptions = {
   extensionPath: string,
   applyFilter: (text: string) => void,
+  onReady: () => void,
 };
 
-export function setupWebview( webview: vscode.Webview, options: SetupWebviewOptions): void {
+export function setupWebview(webview: vscode.Webview, options: SetupWebviewOptions): void {
   webview.options = {
     enableScripts: true,
     localResourceRoots: [vscode.Uri.file(path.join(options.extensionPath, 'dist'))]
@@ -19,7 +20,12 @@ export function setupWebview( webview: vscode.Webview, options: SetupWebviewOpti
       switch (message.command) {
         case 'filter':
           options.applyFilter(message.text);
-          return;
+          break;
+        case 'ready':
+          options.onReady();
+          break;
+        default:
+          throw new Error('Unknown command');
       }
     }
   );

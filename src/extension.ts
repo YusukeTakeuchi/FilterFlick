@@ -15,8 +15,6 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      // show the webview and execute the command
-      await vscode.commands.executeCommand('filterFlickSidebarView.focus');
       webviewProvider.execute(command);
     })
   );
@@ -24,6 +22,10 @@ export function activate(context: vscode.ExtensionContext) {
 
 class FilterFlickSidebarProvider implements vscode.WebviewViewProvider {
   private view?: vscode.Webview;
+
+  // If set, the command will be executed when the webview is ready
+  // This is used when the command is passed as an argument to the `filterFlick.execute` command and the webview is not yet ready
+  private predesignatedCommand?: string;
 
   private readonly extensionPath: string;
 
@@ -38,15 +40,28 @@ class FilterFlickSidebarProvider implements vscode.WebviewViewProvider {
     setupWebview(webviewView.webview, {
       extensionPath: this.extensionPath,
       applyFilter: this.applyFilter.bind(this),
+      onReady: this.webviewReady.bind(this),
     });
   }
 
+  /*
+   * Execute the given shell command in the webview
+   */
   async execute(command: string) {
     if (!this.view) {
+      this.predesignatedCommand = command;
+      await vscode.commands.executeCommand('filterFlickSidebarView.focus');
       return;
     }
+    await vscode.commands.executeCommand('filterFlickSidebarView.focus');
     this.view.postMessage({ command: 'setCommandText', text: command });
     await this.applyFilter(command);
+  }
+
+  private webviewReady() {
+    if (this.predesignatedCommand) {
+      this.execute(this.predesignatedCommand);
+    }
   }
 
   private async applyFilter(command: string) {
