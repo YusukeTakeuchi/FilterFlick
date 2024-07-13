@@ -3,6 +3,7 @@ import * as path from 'path';
 import { setAllContent } from './lib/utils/edit';
 import { filterWithShellCommand } from './lib/utils/commandExecution';
 import { setupWebview } from './lib/setupWebview';
+import { OutputDocumentManager } from './lib/OutputDocumentManager';
 
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
@@ -13,7 +14,7 @@ export function activate(context: vscode.ExtensionContext) {
 class FilterFlickSidebarProvider implements vscode.WebviewViewProvider {
   private readonly extensionPath: string;
 
-  private readonly outputDocumentUris: Map<string, string> = new Map();
+  private readonly outputDocumentManager = new OutputDocumentManager();
 
   constructor(extensionPath: string) {
     this.extensionPath = extensionPath;
@@ -33,37 +34,13 @@ class FilterFlickSidebarProvider implements vscode.WebviewViewProvider {
     }
 
     const document = editor.document;
-    const text = document.getText();
-
-    const filterResult = await filterWithShellCommand(command, text);
+    const filterResult = await filterWithShellCommand(command, document.getText());
 
     if (filterResult.result === 'cancel') {
       return;
     }
-    const filteredText = filterResult.value.stdout;
 
-    let outputDocument = this.getExistingOutputDocument(document);
-
-    if (outputDocument) {
-      setAllContent(outputDocument, filteredText);
-    } else {
-      const newOutputDocument = await vscode.workspace.openTextDocument({ content: filteredText });
-      await vscode.window.showTextDocument(newOutputDocument, {
-        viewColumn: vscode.ViewColumn.Beside,
-        preserveFocus: true,
-      });
-      this.updateOutputDocumentMapping(document, newOutputDocument);
-    }
-  }
-
-  // get the existing output document for the document that is being filtered
-  private getExistingOutputDocument(document: vscode.TextDocument): vscode.TextDocument | undefined {
-    const existingUri = this.outputDocumentUris.get(document.uri.toString());
-    return vscode.workspace.textDocuments.find(doc => doc.uri.toString() === existingUri);
-  }
-
-  private updateOutputDocumentMapping(document: vscode.TextDocument, filterOutputDocument: vscode.TextDocument) {
-    this.outputDocumentUris.set(document.uri.toString(), filterOutputDocument.uri.toString());
+    this.outputDocumentManager.showOutputText(document, filterResult.value.stdout);
   }
 }
 
