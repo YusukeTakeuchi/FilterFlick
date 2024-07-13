@@ -63,6 +63,7 @@ class FilterFlickSidebarProvider implements vscode.WebviewViewProvider {
     }
 
     this.outputDocumentManager.showOutputText(document, filterResult.value.stdout);
+    this.view?.postMessage({ command: 'setStderr', text: filterResult.value.stderr });
   }
 }
 
