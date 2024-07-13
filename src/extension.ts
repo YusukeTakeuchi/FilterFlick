@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { setAllContent } from './utils/edit';
-import { execSync } from 'child_process';
+import { filterWithShellCommand } from './utils/commandExecution';
 
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
@@ -73,7 +73,12 @@ class FilterFlickSidebarProvider implements vscode.WebviewViewProvider {
     const document = editor.document;
     const text = document.getText();
 
-    const filteredText = this.filterWithShellCommand(command, text);
+    const filterResult = await filterWithShellCommand(command, text);
+
+    if (filterResult.result === 'cancel') {
+      return;
+    }
+    const filteredText = filterResult.value.stdout;
 
     let outputDocument = this.getExistingOutputDocument(document);
 
@@ -97,10 +102,6 @@ class FilterFlickSidebarProvider implements vscode.WebviewViewProvider {
 
   private updateOutputDocumentMapping(document: vscode.TextDocument, filterOutputDocument: vscode.TextDocument) {
     this.outputDocumentUris.set(document.uri.toString(), filterOutputDocument.uri.toString());
-  }
-
-  private filterWithShellCommand(command: string, content: string) {
-    return execSync(command, { input: content }).toString();
   }
 }
 
