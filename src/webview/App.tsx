@@ -1,4 +1,4 @@
-import React, { ChangeEvent, FormEventHandler } from 'react';
+import React, { useEffect } from 'react';
 import { VSCodeButton, VSCodeTextField } from '@vscode/webview-ui-toolkit/react';
 import './App.css';
 
@@ -14,6 +14,21 @@ export function App() {
   const handleCommandChange = (e: any) => {
     setCommand(e.target.value);
   };
+
+  useEffect(() => {
+    const listener = (event: MessageEvent<{ command: string, text: string}>) => {
+      const message = event.data;
+      switch(message.command) {
+        case 'setCommandText':
+          setCommand(message.text);
+          break;
+        default:
+          throw new Error('Unknown command');
+      }
+    };
+    addEventListener('message', listener);
+    return () => removeEventListener('message', listener);
+  }, []);
 
   return (
     <form onSubmit={handleSubmit} className="w-full">
