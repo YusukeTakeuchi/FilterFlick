@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { VSCodeButton, VSCodeTextField } from '@vscode/webview-ui-toolkit/react';
 import './App.css';
 import { Stderr } from './Stderr';
+import { useCommandHistory } from './hooks/useCommandHistory';
 
 const vscode = acquireVsCodeApi();
 
@@ -13,20 +14,45 @@ type Command = {
   text: string,
 };
 
+const COMMAND_HISTORY_MAX = 50;
+
 export function App() {
   const [initialized, setInitialized] = React.useState(false);
 
   const [command, setCommand] = React.useState('');
+  const commandHistory = useCommandHistory();
+  const [willSetCommandFromHistory, setWillSetCommandFromHistory] = React.useState(false);
 
   const [stderr, setStderr] = React.useState('');
 
   const handleSubmit = (event: React.FormEvent) => {
+    commandHistory.addCommandToHistory(command);
     applyFilter(event, command);
   };
 
   const handleCommandChange = (e: any) => {
     setCommand(e.target.value);
   };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowUp') {
+      commandHistory.handleArrowUp();
+      setWillSetCommandFromHistory(true);
+    } else if (e.key === 'ArrowDown') {
+      commandHistory.handleArrowDown();
+      setWillSetCommandFromHistory(true);
+    }
+  };
+
+  useEffect(() => {
+    if (willSetCommandFromHistory) {
+      const commandFromHistory = commandHistory.getCommandFromHistory();
+      if (commandFromHistory) {
+        setCommand(commandFromHistory);
+      }
+      setWillSetCommandFromHistory(false);
+    }
+  }, [willSetCommandFromHistory]);
 
   useEffect(() => {
     const listener = (event: MessageEvent<Command>) => {
@@ -53,7 +79,7 @@ export function App() {
   return (
     <>
       <form onSubmit={handleSubmit} className="w-full">
-        <VSCodeTextField type="text" placeholder="Enter filter command" value={command} onInput={handleCommandChange} className="w-full"/>
+        <VSCodeTextField type="text" placeholder="Enter filter command" value={command} onInput={handleCommandChange} onKeyDown={handleKeyDown} className="w-full"/>
         <VSCodeButton type="submit" className="w-full">Execute</VSCodeButton>
       </form>
       <Stderr text={stderr} />
