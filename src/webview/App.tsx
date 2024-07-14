@@ -14,14 +14,13 @@ type Command = {
   text: string,
 };
 
-const COMMAND_HISTORY_MAX = 50;
-
 export function App() {
   const [initialized, setInitialized] = React.useState(false);
 
   const [command, setCommand] = React.useState('');
-  const commandHistory = useCommandHistory();
-  const [willSetCommandFromHistory, setWillSetCommandFromHistory] = React.useState(false);
+  const commandHistory = useCommandHistory({
+    setCommand,
+  });
 
   const [stderr, setStderr] = React.useState('');
 
@@ -37,22 +36,10 @@ export function App() {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowUp') {
       commandHistory.handleArrowUp();
-      setWillSetCommandFromHistory(true);
     } else if (e.key === 'ArrowDown') {
       commandHistory.handleArrowDown();
-      setWillSetCommandFromHistory(true);
     }
   };
-
-  useEffect(() => {
-    if (willSetCommandFromHistory) {
-      const commandFromHistory = commandHistory.getCommandFromHistory();
-      if (commandFromHistory) {
-        setCommand(commandFromHistory);
-      }
-      setWillSetCommandFromHistory(false);
-    }
-  }, [willSetCommandFromHistory]);
 
   useEffect(() => {
     const listener = (event: MessageEvent<Command>) => {
