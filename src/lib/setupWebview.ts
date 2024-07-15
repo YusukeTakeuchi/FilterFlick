@@ -1,10 +1,12 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import { WebviewSyncState } from '../webviewInterop/webviewMessage';
 
 type SetupWebviewOptions = {
   extensionPath: string,
   applyFilter: (text: string) => void,
   onReady: () => void,
+  onSyncState: (state: WebviewSyncState) => void,
 };
 
 export function setupWebview(webview: vscode.Webview, options: SetupWebviewOptions): void {
@@ -23,6 +25,9 @@ export function setupWebview(webview: vscode.Webview, options: SetupWebviewOptio
           break;
         case 'ready':
           options.onReady();
+          break;
+        case 'syncState':
+          options.onSyncState(message.state);
           break;
         default:
           throw new Error('Unknown command');

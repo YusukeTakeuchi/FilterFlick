@@ -2,6 +2,9 @@ import * as vscode from 'vscode';
 import { filterWithShellCommand } from './lib/utils/commandExecution';
 import { setupWebview } from './lib/setupWebview';
 import { OutputDocumentManager } from './lib/OutputDocumentManager';
+import { WebviewSyncState } from './webviewInterop/webviewMessage';
+import { sendMessageToExtension } from './webview/utils/message';
+import { sendMessageToWebview } from './lib/utils/message';
 
 export function activate(context: vscode.ExtensionContext) {
   const webviewProvider = new FilterFlickSidebarProvider(context.extensionPath);
@@ -21,7 +24,9 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 class FilterFlickSidebarProvider implements vscode.WebviewViewProvider {
-  private view?: vscode.Webview;
+  private webview?: vscode.Webview;
+
+  private webviewState?: WebviewSyncState;
 
   // If set, the command will be executed when the webview is ready
   // This is used when the command is passed as an argument to the `filterFlick.execute` command and the webview is not yet ready
@@ -36,11 +41,12 @@ class FilterFlickSidebarProvider implements vscode.WebviewViewProvider {
   }
 
   resolveWebviewView(webviewView: vscode.WebviewView): void | Thenable<void> {
-    this.view = webviewView.webview;
+    this.webview = webviewView.webview;
     setupWebview(webviewView.webview, {
       extensionPath: this.extensionPath,
       applyFilter: this.applyFilter.bind(this),
       onReady: this.webviewReady.bind(this),
+      onSyncState: this.syncState.bind(this),
     });
   }
 
@@ -48,14 +54,14 @@ class FilterFlickSidebarProvider implements vscode.WebviewViewProvider {
    * Execute the given shell command in the webview
    */
   async execute(command: string) {
-    if (!this.view) {
+    if (!this.webview) {
       this.predesignatedCommand = command;
       await vscode.commands.executeCommand('filterFlickSidebarView.focus');
       return;
     }
     await vscode.commands.executeCommand('filterFlickSidebarView.focus');
-    this.view.postMessage({ command: 'setCommandText', text: command });
-    await this.applyFilter(command);
+    sendMessageToWebview(this.webview, { command: 'setCommandText', text: command });
+    await this.applyFilter();
   }
 
   private webviewReady() {
@@ -64,21 +70,31 @@ class FilterFlickSidebarProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  private async applyFilter(command: string) {
+  private syncState(state: WebviewSyncState) {
+    this.webviewState = state;
+  }
+
+  private async applyFilter() {
+    if (!this.webview || !this.webviewState) {
+      return;
+    }
+
+    const v = vscode;
+
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
       return;
     }
 
     const document = editor.document;
-    const filterResult = await filterWithShellCommand(command, document.getText());
+    const filterResult = await filterWithShellCommand(this.webviewState.command, document.getText());
 
     if (filterResult.result === 'cancel') {
       return;
     }
 
-    this.outputDocumentManager.showOutputText(document, filterResult.value.stdout);
-    this.view?.postMessage({ command: 'setStderr', text: filterResult.value.stderr });
+    this.outputDocumentManager.showOutputText(document, filterResult.value.stdout, this.webviewState.showDiff);
+    sendMessageToWebview(this.webview, { command: 'setStderr', text: filterResult.value.stderr });
   }
 }
 

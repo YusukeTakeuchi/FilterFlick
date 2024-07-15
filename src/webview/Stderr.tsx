@@ -11,7 +11,7 @@ export function Stderr({ text }: StderrProps) {
   }
 
   return (
-    <div className="text-red-400 mt-2">
+    <div className="text-red-400 w-full overflow-x-auto">
       <pre>{text}</pre>
     </div>
   );

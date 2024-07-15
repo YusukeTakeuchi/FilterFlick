@@ -1,10 +1,9 @@
 import React, { useEffect } from 'react';
-import { VSCodeButton, VSCodeTextField } from '@vscode/webview-ui-toolkit/react';
+import { VSCodeButton, VSCodeCheckbox, VSCodeTextField } from '@vscode/webview-ui-toolkit/react';
 import './App.css';
 import { Stderr } from './Stderr';
 import { useCommandHistory } from './hooks/useCommandHistory';
-
-const vscode = acquireVsCodeApi();
+import { sendMessageToExtension } from './utils/message';
 
 type Command = {
   command: "setCommandText",
@@ -21,6 +20,8 @@ export function App() {
   const commandHistory = useCommandHistory({
     setCommand,
   });
+
+  const [showDiff, setShowDiff] = React.useState(false);
 
   const [stderr, setStderr] = React.useState('');
 
@@ -41,6 +42,10 @@ export function App() {
     }
   };
 
+  const handleShowDiffChange = (e: any) => {
+    setShowDiff(e.target.checked);
+  };
+
   useEffect(() => {
     const listener = (event: MessageEvent<Command>) => {
       const message = event.data;
@@ -57,11 +62,15 @@ export function App() {
     };
     addEventListener('message', listener);
     if (!initialized) {
-      vscode.postMessage({ command: 'ready' });
+      sendMessageToExtension({ command: 'ready' });
       setInitialized(true);
     }
     return () => removeEventListener('message', listener);
   }, []);
+
+  useEffect(() => {
+    sendMessageToExtension({ command: 'syncState', state: { command, showDiff } });
+  }, [command, showDiff]);
 
   return (
     <>
@@ -69,12 +78,17 @@ export function App() {
         <VSCodeTextField type="text" placeholder="Enter filter command" value={command} onInput={handleCommandChange} onKeyDown={handleKeyDown} className="w-full"/>
         <VSCodeButton type="submit" className="w-full">Execute</VSCodeButton>
       </form>
-      <Stderr text={stderr} />
+      <section className="mt-3">
+        <VSCodeCheckbox onChange={handleShowDiffChange}>Show Diff</VSCodeCheckbox>
+      </section>
+      <section className="mt-3">
+        <Stderr text={stderr} />
+      </section>
     </>
   );
 }
 
 function applyFilter(event: React.FormEvent, command: string) {
   event.preventDefault();
-  vscode.postMessage({ command: 'filter', text: command });
+  sendMessageToExtension({ command: 'filter' });
 }
