@@ -1,21 +1,59 @@
 import * as vscode from 'vscode';
-import { setAllContent } from './utils/edit';
+
+const SCHEMA_OUTPUT = "filterflick-output";
+
+class OutputDocumentContentProvider implements vscode.TextDocumentContentProvider {
+  private readonly getText: (uri: vscode.Uri) => string;
+  private _onDidChange = new vscode.EventEmitter<vscode.Uri>();
+
+  constructor({ getText }: { getText: (uri: vscode.Uri) => string }) {
+    this.getText = getText;
+  }
+
+  dispose() {
+    this._onDidChange.dispose();
+  }
+
+  provideTextDocumentContent(uri: vscode.Uri): string {
+    return this.getText(uri);
+  }
+
+  documentChanged(uri: vscode.Uri) {
+    this._onDidChange.fire(uri);
+  }
+
+  get onDidChange(): vscode.Event<vscode.Uri> {
+    return this._onDidChange.event;
+  }
+}
 
 export class OutputDocumentManager {
   private readonly outputDocumentUris: Map<string, string> = new Map();
 
+  // map the uri of a document to the text of the output document
+  private readonly outputTexts: Map<string, string> = new Map();
+  private readonly outputDocumentContentProvider: OutputDocumentContentProvider;
+
   constructor() {
     this.outputDocumentUris = new Map();
+    this.outputTexts = new Map();
+    this.outputDocumentContentProvider = new OutputDocumentContentProvider({
+      getText: (uri: vscode.Uri) => {
+        return this.outputTexts.get(uri.path) || "";
+      },
+    });
+
+    vscode.workspace.registerTextDocumentContentProvider(SCHEMA_OUTPUT, this.outputDocumentContentProvider);
   }
 
   async showOutputText(document: vscode.TextDocument, outputText: string, showingDiff: boolean) {
     let outputDocument = this.getExistingOutputDocument(document);
 
-    if (outputDocument) {
-      setAllContent(outputDocument, outputText);
+    this.outputTexts.set(document.uri.toString(), outputText);
+    if (!outputDocument) {
+      outputDocument = await vscode.workspace.openTextDocument(this.uriOfOutputDocumentFor(document));
     } else {
-      outputDocument = await vscode.workspace.openTextDocument({ content: outputText });
-      this.updateMapping(document, outputDocument);
+      this.outputDocumentContentProvider.documentChanged(this.uriOfOutputDocumentFor(document));
     }
 
     if (showingDiff) {
@@ -42,8 +80,10 @@ export class OutputDocumentManager {
 
   // get the existing output document for the document that is being filtered
   private getExistingOutputDocument(document: vscode.TextDocument): vscode.TextDocument | undefined {
-    const existingUri = this.outputDocumentUris.get(document.uri.toString());
-    return vscode.workspace.textDocuments.find(doc => doc.uri.toString() === existingUri);
+    const uri = this.uriOfOutputDocumentFor(document);
+    return vscode.workspace.textDocuments.find(
+      doc => doc.uri.toString() === uri.toString()
+    );
   }
 
   private async closeTextTab(document: vscode.TextDocument) {
@@ -69,7 +109,10 @@ export class OutputDocumentManager {
     );
   }
 
-  private updateMapping(document: vscode.TextDocument, filterOutputDocument: vscode.TextDocument) {
-    this.outputDocumentUris.set(document.uri.toString(), filterOutputDocument.uri.toString());
+  private uriOfOutputDocumentFor(document: vscode.TextDocument): vscode.Uri {
+    return vscode.Uri.from({
+      scheme: SCHEMA_OUTPUT,
+      path: document.uri.toString(),
+    });
   }
 }
