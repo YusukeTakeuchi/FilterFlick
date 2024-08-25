@@ -22,3 +22,7 @@ Initial release
 - Commands now display progress and can be cancelled mid-execution.
 - Commands can be executed from the Command Palette.
 - Standard error output is displayed after command execution.
+
+### 0.0.3
+
+- Use TextDocumentContentProvider to show the output
