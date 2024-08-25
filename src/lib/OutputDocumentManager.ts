@@ -28,14 +28,11 @@ class OutputDocumentContentProvider implements vscode.TextDocumentContentProvide
 }
 
 export class OutputDocumentManager {
-  private readonly outputDocumentUris: Map<string, string> = new Map();
-
   // map the uri of a document to the text of the output document
   private readonly outputTexts: Map<string, string> = new Map();
   private readonly outputDocumentContentProvider: OutputDocumentContentProvider;
 
   constructor() {
-    this.outputDocumentUris = new Map();
     this.outputTexts = new Map();
     this.outputDocumentContentProvider = new OutputDocumentContentProvider({
       getText: (uri: vscode.Uri) => {
